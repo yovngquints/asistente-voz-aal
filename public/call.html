@@ -378,7 +378,7 @@
     synth.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'es-CO';
-    utter.rate = 1.1;
+    utter.rate = 1.35;
     const voices = synth.getVoices();
     const esVoice = voices.find(v => v.lang.startsWith('es'));
     if (esVoice) utter.voice = esVoice;
