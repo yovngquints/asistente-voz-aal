@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Llamada simulada – Ángeles al Llamado</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    body {
+      background: #0a1628;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* ── Header ── */
+    .call-header {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .call-header .brand { display: flex; align-items: center; gap: 10px; }
+    .call-header img { height: 36px; filter: brightness(0) invert(1); }
+    .call-header .brand-name { font-size: 14px; font-weight: 700; opacity: 0.9; }
+
+    /* ── Patient card ── */
+    .patient-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 18px 20px;
+      width: 100%;
+      max-width: 600px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 20px;
+    }
+    .patient-card .pname {
+      grid-column: 1 / -1;
+      font-size: 18px;
+      font-weight: 700;
+      color: #90cdf4;
+      margin-bottom: 4px;
+    }
+    .patient-card .pinfo { font-size: 12px; opacity: 0.75; line-height: 1.5; }
+    .patient-card .pinfo strong { color: rgba(255,255,255,0.9); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+
+    /* ── Call status ── */
+    .call-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 10px 16px;
+      width: 100%;
+      max-width: 600px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+      background: #a0aec0;
+    }
+    .status-dot.active { background: #68d391; animation: pulse 1.5s ease-in-out infinite; }
+    .status-dot.listening { background: #63b3ed; animation: pulse 1s ease-in-out infinite; }
+    .status-dot.thinking { background: #f6ad55; animation: pulse 0.8s ease-in-out infinite; }
+    .status-dot.urgent { background: #fc8181; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+
+    /* ── Conversation ── */
+    .conversation {
+      width: 100%;
+      max-width: 600px;
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 380px;
+      padding-right: 4px;
+    }
+    .conversation::-webkit-scrollbar { width: 4px; }
+    .conversation::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+    .msg {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+    .msg.assistant { flex-direction: row; }
+    .msg.patient   { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .msg.assistant .msg-avatar { background: rgba(13,79,139,0.6); }
+    .msg.patient   .msg-avatar { background: rgba(0,168,120,0.4); }
+
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.55;
+      max-width: 80%;
+    }
+    .msg.assistant .msg-bubble { background: rgba(13,79,139,0.5); border-bottom-left-radius: 4px; }
+    .msg.patient   .msg-bubble { background: rgba(0,168,120,0.35); border-bottom-right-radius: 4px; text-align: right; }
+    .msg-bubble.urgent { background: rgba(229,62,62,0.35) !important; border: 1px solid rgba(252,129,129,0.4); }
+
+    /* Typing indicator */
+    .typing-dots { display: flex; gap: 4px; padding: 6px 0; }
+    .typing-dots span { width: 7px; height: 7px; background: rgba(255,255,255,0.5); border-radius: 50%; animation: dot-bounce 1.2s ease-in-out infinite; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-bounce { 0%,80%,100%{transform:scale(1)} 40%{transform:scale(1.5)} }
+
+    /* ── Controls ── */
+    .call-controls {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .mic-btn {
+      width: 72px; height: 72px; border-radius: 50%; border: none; cursor: pointer;
+      font-size: 30px; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.12);
+      box-shadow: 0 0 0 0 rgba(99,179,237,0);
+    }
+    .mic-btn:hover:not(:disabled) { background: rgba(255,255,255,0.2); transform: scale(1.05); }
+    .mic-btn.recording {
+      background: rgba(99,179,237,0.25);
+      box-shadow: 0 0 0 12px rgba(99,179,237,0.15);
+      animation: mic-pulse 1.5s ease-in-out infinite;
+    }
+    .mic-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    @keyframes mic-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(99,179,237,0.3)} 50%{box-shadow:0 0 0 16px rgba(99,179,237,0)} }
+
+    .mic-label { font-size: 13px; opacity: 0.7; text-align: center; }
+    .interim-text { font-size: 13px; color: #63b3ed; min-height: 20px; text-align: center; font-style: italic; }
+
+    .btn-end-call {
+      background: rgba(229,62,62,0.2); border: 1px solid rgba(229,62,62,0.4);
+      color: #fc8181; padding: 10px 28px; border-radius: 50px;
+      cursor: pointer; font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+    }
+    .btn-end-call:hover { background: rgba(229,62,62,0.35); }
+
+    .call-number-badge {
+      background: rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 4px 14px; font-size: 12px; opacity: 0.8;
+    }
+
+    #urgent-banner {
+      width: 100%; max-width: 600px;
+      background: rgba(229,62,62,0.25); border: 1px solid rgba(252,129,129,0.4);
+      border-radius: 12px; padding: 12px 16px; font-size: 13px; color: #fc8181;
+      text-align: center; font-weight: 600; display: none; margin-bottom: 16px;
+    }
+
+    #error-banner {
+      width: 100%; max-width: 600px;
+      background: rgba(229,62,62,0.25); border: 1px solid rgba(252,129,129,0.4);
+      border-radius: 12px; padding: 12px 16px; font-size: 13px; color: #fc8181;
+      text-align: center; display: none; margin-bottom: 16px;
+    }
+
+    .call-ended-overlay {
+      position: fixed; inset: 0; background: rgba(10,22,40,0.92);
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; z-index: 50;
+    }
+    .call-ended-overlay .icon { font-size: 56px; }
+    .call-ended-overlay h2 { font-size: 22px; font-weight: 700; }
+    .call-ended-overlay p { color: rgba(255,255,255,0.7); font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <div class="call-header">
+    <div class="brand">
+      <img src="/img/logo.png" alt="Logo" onerror="this.style.display='none'" />
+      <div class="brand-name">Ángeles al Llamado</div>
+    </div>
+    <span class="call-number-badge" id="call-number-badge">Llamada #1</span>
+  </div>
+
+  <div class="patient-card" id="patient-card">
+    <div class="pname" id="pc-name">Cargando paciente...</div>
+    <div class="pinfo"><strong>Condición</strong><span id="pc-condition">—</span></div>
+    <div class="pinfo"><strong>Medicamentos</strong><span id="pc-meds">—</span></div>
+    <div class="pinfo"><strong>Alergias</strong><span id="pc-allergies">—</span></div>
+    <div class="pinfo"><strong>Tripulación</strong><span id="pc-crew">—</span></div>
+    <div class="pinfo"><strong>ETA</strong><span id="pc-eta">—</span></div>
+  </div>
+
+  <div id="urgent-banner">⚠️ ALERTA: El paciente reporta síntomas que requieren atención inmediata</div>
+  <div id="error-banner"></div>
+
+  <div class="call-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Iniciando llamada...</span>
+  </div>
+
+  <div class="conversation" id="conversation"></div>
+
+  <div class="call-controls">
+    <div class="interim-text" id="interim-text"></div>
+    <button class="mic-btn" id="mic-btn" disabled title="Mantén presionado para hablar">🎤</button>
+    <div class="mic-label" id="mic-label">Espera al asistente...</div>
+    <button class="btn-end-call" id="btn-end-call">📵 Terminar llamada</button>
+  </div>
+
+  <div class="call-ended-overlay" id="call-ended-overlay">
+    <div class="icon">✅</div>
+    <h2>Llamada terminada</h2>
+    <p id="ended-summary">La conversación fue guardada correctamente.</p>
+    <button class="btn btn-primary" onclick="window.close()">Cerrar ventana</button>
+  </div>
+
+<script>
+  // ── Params ─────────────────────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  const ORDER_ID = params.get('order');
+  const TOKEN    = params.get('token');
+  const API      = '';
+
+  let callLogId    = null;
+  let orderData    = null;
+  let isRecording  = false;
+  let recognition  = null;
+  let currentAudio = null;
+  let isSpeaking   = false;
+  let callEnded    = false;
+
+  // ── Helpers ────────────────────────────────────────
+  async function apiFetch(path, opts = {}) {
+    const res = await fetch(API + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}`, ...(opts.headers || {}) }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Error del servidor');
+    return data;
+  }
+
+  function setStatus(type, text) {
+    const dot = document.getElementById('status-dot');
+    dot.className = `status-dot${type ? ' ' + type : ''}`;
+    document.getElementById('status-text').textContent = text;
+  }
+
+  function addMessage(role, content, urgent = false) {
+    const conv = document.getElementById('conversation');
+    const msg  = document.createElement('div');
+    msg.className = `msg ${role === 'assistant' ? 'assistant' : 'patient'}`;
+    msg.innerHTML = `
+      <div class="msg-avatar">${role === 'assistant' ? '🤖' : '👤'}</div>
+      <div class="msg-bubble${urgent ? ' urgent' : ''}">${content}</div>
+    `;
+    conv.appendChild(msg);
+    conv.scrollTop = conv.scrollHeight;
+  }
+
+  function addTyping() {
+    const conv = document.getElementById('conversation');
+    const el = document.createElement('div');
+    el.className = 'msg assistant'; el.id = 'typing-indicator';
+    el.innerHTML = '<div class="msg-avatar">🤖</div><div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+    conv.appendChild(el);
+    conv.scrollTop = conv.scrollHeight;
+    return el;
+  }
+
+  function removeTyping() {
+    document.getElementById('typing-indicator')?.remove();
+  }
+
+  // ── TTS: Asistente habla (ElevenLabs streaming) ──────
+  async function speak(text) {
+    return new Promise(async resolve => {
+      isSpeaking = true;
+      setStatus('active', 'El asistente está hablando...');
+      document.getElementById('mic-btn').disabled = true;
+      document.getElementById('mic-label').textContent = 'Espera al asistente...';
+
+      const done = () => { isSpeaking = false; if (!callEnded) enableMic(); resolve(); };
+
+      try {
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+          body: JSON.stringify({ text }),
+        });
+
+        if (!res.ok) throw new Error('Error al generar audio');
+
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+
+        // Streaming con MediaSource — empieza a reproducir con los primeros chunks
+        const mime = 'audio/mpeg';
+        if (MediaSource.isTypeSupported(mime)) {
+          const mediaSource = new MediaSource();
+          const audioUrl = URL.createObjectURL(mediaSource);
+          currentAudio = new Audio(audioUrl);
+          currentAudio.playbackRate = 1.2;
+          currentAudio.onended = () => { URL.revokeObjectURL(audioUrl); done(); };
+          currentAudio.onerror = done;
+
+          mediaSource.addEventListener('sourceopen', async () => {
+            const sourceBuffer = mediaSource.addSourceBuffer(mime);
+            const reader = res.body.getReader();
+            let playStarted = false;
+
+            const pump = async () => {
+              const { done: streamDone, value } = await reader.read();
+
+              if (streamDone) {
+                const finish = () => mediaSource.readyState === 'open' && mediaSource.endOfStream();
+                sourceBuffer.updating ? sourceBuffer.addEventListener('updateend', finish, { once: true }) : finish();
+                return;
+              }
+
+              if (sourceBuffer.updating) {
+                await new Promise(r => sourceBuffer.addEventListener('updateend', r, { once: true }));
+              }
+              sourceBuffer.appendBuffer(value);
+
+              // Arrancar reproducción con el primer chunk — sin esperar el audio completo
+              if (!playStarted) {
+                playStarted = true;
+                currentAudio.play().catch(console.warn);
+              }
+
+              sourceBuffer.addEventListener('updateend', pump, { once: true });
+            };
+
+            pump();
+          });
+
+        } else {
+          // Fallback para navegadores sin MediaSource
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          currentAudio = new Audio(url);
+          currentAudio.playbackRate = 1.2;
+          currentAudio.onended = () => { URL.revokeObjectURL(url); done(); };
+          currentAudio.onerror = done;
+          await currentAudio.play();
+        }
+
+      } catch (err) {
+        console.error('TTS error:', err);
+        showError(`Error de voz: ${err.message}`);
+        done();
+      }
+    });
+  }
+
+  // ── STT: Paciente habla ────────────────────────────
+  function enableMic() {
+    setStatus('listening', 'Presiona el micrófono para hablar como paciente');
+    document.getElementById('mic-btn').disabled = false;
+    document.getElementById('mic-label').textContent = 'Presiona para hablar (como paciente)';
+  }
+
+  function setupRecognition() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      document.getElementById('mic-label').textContent = 'Tu navegador no soporta reconocimiento de voz. Usa Chrome.';
+      return;
+    }
+    recognition = new SR();
+    recognition.lang = 'es-CO';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onresult = e => {
+      const interim = Array.from(e.results).map(r => r[0].transcript).join('');
+      document.getElementById('interim-text').textContent = interim;
+      if (e.results[e.results.length - 1].isFinal) {
+        document.getElementById('interim-text').textContent = '';
+        sendPatientMessage(interim);
+      }
+    };
+
+    recognition.onstart = () => {
+      isRecording = true;
+      setStatus('listening', 'Escuchando...');
+      document.getElementById('mic-btn').classList.add('recording');
+      document.getElementById('mic-label').textContent = 'Escuchando... suelta para enviar';
+    };
+
+    recognition.onend = () => {
+      isRecording = false;
+      document.getElementById('mic-btn').classList.remove('recording');
+    };
+
+    recognition.onerror = e => {
+      isRecording = false;
+      document.getElementById('mic-btn').classList.remove('recording');
+      if (e.error !== 'no-speech') setStatus('', `Error de micrófono: ${e.error}`);
+      else enableMic();
+    };
+  }
+
+  const micBtn = document.getElementById('mic-btn');
+  micBtn.addEventListener('click', () => {
+    if (callEnded || isSpeaking) return;
+    if (isRecording) { recognition?.stop(); return; }
+    try { recognition?.start(); } catch(e) { console.warn(e); }
+  });
+
+  // ── Enviar mensaje del paciente → asistente ───────
+  async function sendPatientMessage(text) {
+    if (!text.trim()) { enableMic(); return; }
+    document.getElementById('mic-btn').disabled = true;
+    addMessage('patient', text);
+    const typing = addTyping();
+    setStatus('thinking', 'El asistente está pensando...');
+
+    try {
+      const data = await apiFetch('/api/assistant/respond', {
+        method: 'POST',
+        body: JSON.stringify({ call_log_id: callLogId, patient_message: text })
+      });
+      removeTyping();
+
+      if (data.is_urgent) {
+        document.getElementById('urgent-banner').style.display = 'block';
+        document.getElementById('status-dot').classList.add('urgent');
+      }
+
+      addMessage('assistant', data.message, data.is_urgent);
+      await speak(data.message);
+    } catch (err) {
+      removeTyping();
+      showError(`Error al obtener respuesta: ${err.message}`);
+      enableMic();
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-banner');
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 6000);
+  }
+
+  // ── Terminar llamada ───────────────────────────────
+  document.getElementById('btn-end-call').addEventListener('click', endCall);
+
+  async function endCall() {
+    if (callEnded) return;
+    callEnded = true;
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    recognition?.stop();
+    setStatus('', 'Terminando llamada...');
+    document.getElementById('mic-btn').disabled = true;
+    document.getElementById('btn-end-call').disabled = true;
+
+    try {
+      if (callLogId) {
+        await apiFetch('/api/assistant/end', {
+          method: 'POST',
+          body: JSON.stringify({ call_log_id: callLogId })
+        });
+      }
+    } catch (e) { console.warn(e); }
+
+    const overlay = document.getElementById('call-ended-overlay');
+    overlay.style.display = 'flex';
+  }
+
+  // ── Init ────────────────────────────────────────────
+  async function init() {
+    if (!ORDER_ID || !TOKEN) {
+      showError('Parámetros de llamada inválidos. Cierra esta ventana.');
+      return;
+    }
+
+    setupRecognition();
+
+    try {
+      // Cargar datos de la orden
+      orderData = await apiFetch(`/api/orders/${ORDER_ID}`);
+      const p = orderData;
+
+      document.getElementById('pc-name').textContent      = p.patient_name + (p.patient_age ? ` · ${p.patient_age} años` : '');
+      document.getElementById('pc-condition').textContent = p.patient_condition  || 'No especificada';
+      document.getElementById('pc-meds').textContent      = p.patient_medications|| 'Ninguno registrado';
+      document.getElementById('pc-allergies').textContent = p.patient_allergies  || 'Ninguna';
+      document.getElementById('pc-crew').textContent      = p.crew_name;
+      document.getElementById('pc-eta').textContent       = `~${p.eta_minutes} min`;
+
+      const callNum = (p.calls_completed || 0) + 1;
+      document.getElementById('call-number-badge').textContent = `Llamada #${callNum}`;
+
+      // Iniciar llamada en el servidor
+      setStatus('thinking', 'El asistente está preparándose...');
+      const startData = await apiFetch('/api/assistant/start', {
+        method: 'POST',
+        body: JSON.stringify({ order_id: parseInt(ORDER_ID) })
+      });
+
+      callLogId = startData.call_log_id;
+
+      if (startData.is_urgent) {
+        document.getElementById('urgent-banner').style.display = 'block';
+      }
+
+      addMessage('assistant', startData.message, startData.is_urgent);
+
+      // Asistente habla el mensaje inicial
+      await speak(startData.message);
+
+    } catch (err) {
+      showError(`Error al iniciar: ${err.message}`);
+      setStatus('', 'Error al conectar');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

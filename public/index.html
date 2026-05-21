@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel de Control – Asistente de Voz AAL</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0D4F8B,#1a7abf 60%,#00A878);padding:20px;">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 10px 50px rgba(0,0,0,0.2);">
+    <div style="text-align:center;margin-bottom:24px;">
+      <img src="/img/logo.png" alt="Logo" style="height:56px;" onerror="this.style.display='none'" />
+      <div style="font-size:18px;font-weight:800;color:#0D4F8B;margin-top:8px;">Ángeles al Llamado</div>
+      <div style="font-size:13px;color:#6b7280;margin-top:2px;">Asistente de Voz – Panel de Control</div>
+    </div>
+    <div id="login-error" class="alert alert-error hidden"></div>
+    <div class="field">
+      <label>PIN de acceso</label>
+      <input id="login-pin" type="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-primary" id="btn-login" style="width:100%;margin-top:4px;">Ingresar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen" style="display:none;">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <img src="/img/logo.png" alt="Logo" onerror="this.style.display='none'" />
+      <div>
+        <div class="topbar-title">Panel de Control</div>
+        <div class="topbar-sub">Asistente de Voz · Ángeles al Llamado</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span id="topbar-date" style="font-size:12px;opacity:0.8;"></span>
+      <button class="btn-ghost" id="btn-logout">Salir</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="orders">Órdenes activas</button>
+    <button class="tab" data-tab="patients">Pacientes</button>
+    <button class="tab" data-tab="history">Historial</button>
+  </div>
+
+  <!-- ÓRDENES ACTIVAS -->
+  <div class="tab-content active" id="tab-orders">
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="lbl">Órdenes activas</div><div class="val" id="st-active">–</div></div>
+      <div class="stat-card ok"><div class="lbl">Completadas hoy</div><div class="val" id="st-done">–</div></div>
+      <div class="stat-card danger"><div class="lbl">Alertas urgentes</div><div class="val" id="st-urgent">–</div></div>
+      <div class="stat-card"><div class="lbl">Pacientes registrados</div><div class="val" id="st-patients">–</div></div>
+    </div>
+
+    <div class="section-hd">
+      Órdenes de servicio activas
+      <button class="btn btn-primary btn-sm" id="btn-new-order">+ Nueva orden</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Paciente</th><th>Condición</th><th>Tripulación</th>
+          <th>ETA</th><th>Llamadas</th><th>Última llamada</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="orders-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PACIENTES -->
+  <div class="tab-content" id="tab-patients">
+    <div class="section-hd">
+      Pacientes registrados
+      <button class="btn btn-primary btn-sm" id="btn-new-patient">+ Nuevo paciente</button>
+    </div>
+    <div style="margin-bottom:16px;">
+      <input id="patient-search" type="text" placeholder="Buscar por nombre o cédula..." style="max-width:320px;" />
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nombre</th><th>Edad</th><th>Cédula</th><th>Condición</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+        <tbody id="patients-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="tab-content" id="tab-history">
+    <div class="section-hd">Historial de órdenes completadas</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Paciente</th><th>Condición</th><th>Tripulación</th><th>Llamadas</th><th>Fecha</th><th>Transcripción</th></tr></thead>
+        <tbody id="history-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nueva orden -->
+<div class="modal-overlay" id="modal-order">
+  <div class="modal">
+    <h3>Nueva orden de servicio</h3>
+    <div id="order-error" class="alert alert-error hidden"></div>
+    <div class="field">
+      <label>Paciente</label>
+      <select id="ord-patient"><option value="">— Selecciona paciente —</option></select>
+    </div>
+    <div id="patient-preview" class="alert alert-warn hidden" style="font-size:13px;line-height:1.6;"></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Tripulación asignada</label>
+        <input id="ord-crew" type="text" placeholder="Ej: Tripulación 3 – Dr. Ramírez" />
+      </div>
+      <div class="field">
+        <label>Tiempo estimado de llegada (min)</label>
+        <input id="ord-eta" type="number" value="30" min="5" max="120" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Intervalo entre llamadas (min)</label>
+      <input id="ord-interval" type="number" value="10" min="5" max="30" />
+    </div>
+    <div class="field">
+      <label>Notas adicionales para el asistente (opcional)</label>
+      <textarea id="ord-notes" placeholder="Ej: El paciente está solo en casa. Timbre no funciona."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" id="btn-order-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="btn-order-save">Despachar y programar llamadas</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Paciente -->
+<div class="modal-overlay" id="modal-patient">
+  <div class="modal">
+    <h3 id="patient-modal-title">Nuevo paciente</h3>
+    <div id="patient-error" class="alert alert-error hidden"></div>
+    <input type="hidden" id="pat-id" />
+    <div class="field-row">
+      <div class="field"><label>Nombre completo</label><input id="pat-name" type="text" placeholder="Ej: María González" /></div>
+      <div class="field"><label>Edad</label><input id="pat-age" type="number" placeholder="65" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Cédula</label><input id="pat-id-num" type="text" placeholder="12345678" /></div>
+      <div class="field"><label>Teléfono</label><input id="pat-phone" type="text" placeholder="3001234567" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Tipo de sangre</label><input id="pat-blood" type="text" placeholder="O+" /></div>
+      <div class="field">
+        <label>Contacto de emergencia</label>
+        <input id="pat-ec-name" type="text" placeholder="Nombre" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Teléfono contacto de emergencia</label>
+      <input id="pat-ec-phone" type="text" placeholder="3009876543" />
+    </div>
+    <div class="field">
+      <label>Condición / Diagnóstico actual</label>
+      <textarea id="pat-condition" placeholder="Ej: Paciente con insuficiencia cardíaca crónica, post-cirugía de cadera hace 3 meses."></textarea>
+    </div>
+    <div class="field">
+      <label>Medicamentos actuales</label>
+      <textarea id="pat-meds" placeholder="Ej: Metformina 500mg cada 12h, Lisinopril 10mg diario, Aspirina 100mg diario."></textarea>
+    </div>
+    <div class="field">
+      <label>Alergias</label>
+      <input id="pat-allergies" type="text" placeholder="Ej: Penicilina, AINES" />
+    </div>
+    <div class="field">
+      <label>Instrucciones especiales para el asistente</label>
+      <textarea id="pat-instructions" placeholder="Ej: No debe moverse del sofá. Recordarle que no tome agua fría. Tiende a angustiarse; mantenerlo tranquilo es prioridad."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" id="btn-patient-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="btn-patient-save">Guardar paciente</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Transcripción -->
+<div class="modal-overlay" id="modal-transcript">
+  <div class="modal" style="max-width:640px;">
+    <h3 id="transcript-title">Transcripción de llamada</h3>
+    <div id="transcript-body" style="max-height:500px;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-cancel" id="btn-transcript-close" style="max-width:160px;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/dashboard.js"></script>
+</body>
+</html>
