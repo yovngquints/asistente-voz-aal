@@ -38,7 +38,7 @@ router.post('/', verifyToken, async (req, res) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error('ElevenLabs error:', errText);
-      return res.status(500).json({ error: 'Error al generar audio' });
+      return res.status(500).json({ error: `ElevenLabs: ${errText}` });
     }
 
     res.set('Content-Type', 'audio/mpeg');
