@@ -6,11 +6,12 @@ const { verifyToken } = require('../middleware/auth');
 router.post('/', verifyToken, async (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'Texto requerido' });
-  if (!process.env.ELEVENLABS_API_KEY) {
-    return res.status(500).json({ error: 'ELEVENLABS_API_KEY no configurada en .env' });
-  }
 
   const voiceId = process.env.ELEVENLABS_VOICE_ID || 'EXAVITQu4vr4xnSDxMaL';
+
+  if (!process.env.ELEVENLABS_API_KEY) {
+    return res.json({ fallback: true, text });
+  }
 
   try {
     const response = await fetch(
@@ -36,16 +37,16 @@ router.post('/', verifyToken, async (req, res) => {
     );
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.error('ElevenLabs error:', errText);
-      return res.status(500).json({ error: `ElevenLabs: ${errText}` });
+      console.error('ElevenLabs no disponible, usando voz del navegador');
+      return res.json({ fallback: true, text });
     }
 
     res.set('Content-Type', 'audio/mpeg');
     res.set('Transfer-Encoding', 'chunked');
     Readable.fromWeb(response.body).pipe(res);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('TTS error:', err.message);
+    return res.json({ fallback: true, text });
   }
 });
 

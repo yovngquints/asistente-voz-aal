@@ -295,7 +295,7 @@
     document.getElementById('typing-indicator')?.remove();
   }
 
-  // ── TTS: Asistente habla (ElevenLabs streaming) ──────
+  // ── TTS: ElevenLabs con fallback a voz del navegador ─
   async function speak(text) {
     return new Promise(async resolve => {
       isSpeaking = true;
@@ -312,11 +312,19 @@
           body: JSON.stringify({ text }),
         });
 
-        if (!res.ok) throw new Error('Error al generar audio');
+        if (!res.ok) { speakBrowser(text, done); return; }
 
+        const contentType = res.headers.get('content-type') || '';
+
+        // Si el servidor indica fallback, usar voz del navegador
+        if (contentType.includes('application/json')) {
+          speakBrowser(text, done);
+          return;
+        }
+
+        // Audio de ElevenLabs — streaming con MediaSource
         if (currentAudio) { currentAudio.pause(); currentAudio = null; }
 
-        // Streaming con MediaSource — empieza a reproducir con los primeros chunks
         const mime = 'audio/mpeg';
         if (MediaSource.isTypeSupported(mime)) {
           const mediaSource = new MediaSource();
@@ -333,32 +341,21 @@
 
             const pump = async () => {
               const { done: streamDone, value } = await reader.read();
-
               if (streamDone) {
                 const finish = () => mediaSource.readyState === 'open' && mediaSource.endOfStream();
                 sourceBuffer.updating ? sourceBuffer.addEventListener('updateend', finish, { once: true }) : finish();
                 return;
               }
-
               if (sourceBuffer.updating) {
                 await new Promise(r => sourceBuffer.addEventListener('updateend', r, { once: true }));
               }
               sourceBuffer.appendBuffer(value);
-
-              // Arrancar reproducción con el primer chunk — sin esperar el audio completo
-              if (!playStarted) {
-                playStarted = true;
-                currentAudio.play().catch(console.warn);
-              }
-
+              if (!playStarted) { playStarted = true; currentAudio.play().catch(console.warn); }
               sourceBuffer.addEventListener('updateend', pump, { once: true });
             };
-
             pump();
           });
-
         } else {
-          // Fallback para navegadores sin MediaSource
           const blob = await res.blob();
           const url = URL.createObjectURL(blob);
           currentAudio = new Audio(url);
@@ -370,10 +367,24 @@
 
       } catch (err) {
         console.error('TTS error:', err);
-        showError(`Error de voz: ${err.message}`);
-        done();
+        speakBrowser(text, done);
       }
     });
+  }
+
+  // ── Voz del navegador (fallback) ───────────────────
+  function speakBrowser(text, done) {
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'es-CO';
+    utter.rate = 1.1;
+    const voices = synth.getVoices();
+    const esVoice = voices.find(v => v.lang.startsWith('es'));
+    if (esVoice) utter.voice = esVoice;
+    utter.onend = done;
+    utter.onerror = done;
+    synth.speak(utter);
   }
 
   // ── STT: Paciente habla ────────────────────────────
